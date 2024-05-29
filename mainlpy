@@ -1,0 +1,57 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Загрузка данных
+data = pd.read_csv('EURUSD_Monthly_199001010000_202403010000.csv', sep='\t')
+data.rename(columns=lambda x: x.strip('<>'), inplace=True)  # Убираем угловые скобки из названий столбцов
+data.rename(columns={'DATE': 'Date', 'OPEN': 'Open', 'HIGH': 'High', 'LOW': 'Low', 'CLOSE': 'Close', 'TICKVOL': 'Volume'}, inplace=True)
+data['Date'] = pd.to_datetime(data['Date'], format='%Y.%m.%d')
+data.set_index('Date', inplace=True)
+
+# Проверка переименования столбцов
+print(data.columns)
+
+# Функция для поиска экстремумов
+def find_extremes(data, window=5):
+    local_max = (data['High'] == data['High'].rolling(window, center=True).max())
+    local_min = (data['Low'] == data['Low'].rolling(window, center=True).min())
+    return data[local_max | local_min]
+
+# Поиск экстремумов
+extremes = find_extremes(data)
+
+# Функция для разметки волн
+def mark_waves(extremes):
+    waves = []
+    for i in range(len(extremes) - 4):
+        wave = extremes.iloc[i:i+5]
+        if validate_wave(wave):
+            waves.append(wave)
+    return waves
+
+# Функция для проверки волны на соответствие правилам
+def validate_wave(wave):
+    # Здесь будут проверки на соответствие волны правилам из предоставленных документов
+    # Например, проверка для импульса:
+    if len(wave) == 5 and wave.iloc[2]['High'] > wave.iloc[0]['High']:
+        return True
+    return False
+
+# Разметка волн
+waves = mark_waves(extremes)
+
+# Визуализация результатов
+def plot_waves(data, waves):
+    plt.figure(figsize=(15, 7))
+    plt.plot(data['Close'], label='Close Price')
+    for wave in waves:
+        plt.plot(wave.index, wave['Close'], marker='o')
+    plt.title('EUR/USD with Wave Markings')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.show()
+
+# Построение графика с разметкой волн
+plot_waves(data, waves)
